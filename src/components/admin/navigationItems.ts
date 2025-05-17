@@ -2,9 +2,11 @@ import {
   LayoutDashboard, 
   Users, 
   Settings, 
-  BarChart2, 
+  BarChart, 
   FileText, 
   Calendar,
+  DollarSign,
+  FileBarChart,
   ClipboardCheck,
   LucideIcon
 } from "lucide-react";
@@ -15,12 +17,13 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-export const navigation: NavItem[] = [
+export const adminNavigationLinks: NavItem[] = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Events', href: '/admin/events', icon: Calendar },
-  { name: 'Applications', href: '/admin/applications', icon: ClipboardCheck },
-  { name: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
-  { name: 'Reports', href: '/admin/reports', icon: FileText },
+  { name: 'Applications', href: '/admin/applications', icon: FileText },
+  { name: 'Payments', href: '/admin/payments', icon: DollarSign },
+  { name: 'Analytics', href: '/admin/analytics', icon: BarChart },
+  { name: 'Reports', href: '/admin/reports', icon: FileBarChart },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]; 

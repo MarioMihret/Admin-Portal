@@ -5,6 +5,7 @@ import { signIn, useSession, SessionProvider } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { LoadingSpinner } from '@/app/providers';
 
 // Separate the content that uses useSession from the page component
 function SignInContent() {
@@ -19,20 +20,11 @@ function SignInContent() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [formActive, setFormActive] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Set mounted state to prevent hydration errors
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  // Activate form with animation on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFormActive(true);
-    }, 100);
-    return () => clearTimeout(timer);
   }, []);
 
   // Redirect authenticated users to their dashboard
@@ -130,41 +122,23 @@ function SignInContent() {
     }
   };
 
-  // If still loading the session, show animated loading state
+  // If still loading the session, show the main LoadingSpinner
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-blue-50">
-        <div className="flex flex-col items-center">
-          <div className="w-16 h-16 relative">
-            <div className="absolute top-0 left-0 w-full h-full border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
-          </div>
-          <div className="mt-4 text-gray-600 font-medium">Loading your session...</div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
   
-  // Skip rendering the login page if we're authenticated (will redirect via useEffect)
+  // If authenticated, show LoadingSpinner while useEffect redirects.
   if (status === 'authenticated') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-blue-50">
-        <div className="flex flex-col items-center">
-          <div className="w-16 h-16 relative">
-            <div className="absolute top-0 left-0 w-full h-full border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
-          </div>
-          <div className="mt-4 text-gray-600 font-medium">Redirecting to your dashboard...</div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-blue-50 px-4 sm:px-6 lg:px-8">
-      <div className={`max-w-5xl w-full bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-700 ease-in-out transform ${formActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      <div className={`max-w-5xl w-full bg-white rounded-xl shadow-lg overflow-hidden`}>
         <div className="flex flex-col lg:flex-row">
           {/* Left side with login form */}
-          <div className="w-full lg:w-1/2 p-8 lg:p-12 transition-all duration-500 ease-in-out">
-            <div className="mb-8 transform transition-all duration-700 ease-in-out" style={{ transitionDelay: '100ms' }}>
+          <div className="w-full lg:w-1/2 p-8 lg:p-12">
+            <div className="mb-8">
               <div className="p-3 bg-blue-50 rounded-xl inline-block">
                 <svg className="h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 15V17M6 21H18C19.1046 21 20 20.1046 20 19V13C20 11.8954 19.1046 11 18 11H6C4.89543 11 4 11.8954 4 13V19C4 20.1046 4.89543 21 6 21ZM16 11V7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7V11H16Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -194,9 +168,8 @@ function SignInContent() {
             )}
             
             <form 
-              className="space-y-6 transform transition-all duration-700 ease-in-out" 
+              className="space-y-6" 
               onSubmit={handleSubmit}
-              style={{ transitionDelay: '200ms' }}
             >
               <div className="rounded-md space-y-4">
                 <div className="group">

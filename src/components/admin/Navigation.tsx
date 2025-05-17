@@ -16,25 +16,7 @@ import {
   FileBarChart,
   DollarSign
 } from "lucide-react";
-
-// Navigation item interface
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ElementType;
-}
-
-// Navigation items
-const navigation: NavItem[] = [
-  { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Applications", href: "/admin/applications", icon: FileText },
-  { name: "Events", href: "/admin/events", icon: Calendar },
-  { name: "Payments", href: "/admin/payments", icon: DollarSign },
-  { name: "Analytics", href: "/admin/analytics", icon: BarChart },
-  { name: "Reports", href: "/admin/reports", icon: FileBarChart },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-];
+import { adminNavigationLinks, NavItem } from "./navigationItems";
 
 // NavLink component for desktop navigation
 function NavLink({ item }: { item: NavItem }) {
@@ -57,7 +39,7 @@ function NavLink({ item }: { item: NavItem }) {
       />
       <span>{item.name}</span>
       {isActive && (
-        <div className="absolute left-0 h-full w-1 bg-blue-600 rounded-r-full" />
+        <span className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full" aria-hidden="true" />
       )}
     </Link>
   );
@@ -113,7 +95,7 @@ function MobileNav({ onClose }: { onClose: () => void }) {
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 px-2 py-4">
-            {navigation.map((item) => {
+            {adminNavigationLinks.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
@@ -156,7 +138,7 @@ export function AdminNavigation() {
           Main Menu
         </h2>
         <div className="space-y-1">
-          {navigation.map((item) => (
+          {adminNavigationLinks.map((item) => (
             <NavLink key={item.name} item={item} />
           ))}
         </div>

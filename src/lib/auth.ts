@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/db";
 import { compare } from "bcryptjs";
 import { User } from "@/models/User";
 import { MongoClient } from "mongodb";
+import { ROLES, AppRole } from "@/constants/roles";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -48,7 +49,7 @@ export const authOptions: NextAuthOptions = {
             }
             
             // Verify this is actually an admin or super-admin
-            if (adminUser.role !== 'admin' && adminUser.role !== 'super-admin') {
+            if (adminUser.role !== ROLES.ADMIN && adminUser.role !== ROLES.SUPER_ADMIN) {
               console.log("User in role collection does not have admin privileges");
               throw new Error("Access denied. Only admin users can log in.");
             }
@@ -79,7 +80,7 @@ export const authOptions: NextAuthOptions = {
               id: adminUser._id.toString(),
               email: adminUser.email,
               name: adminUser.name,
-              role: adminUser.role,
+              role: adminUser.role as AppRole,
               requirePasswordChange: adminUser.requirePasswordChange,
             };
           }
@@ -121,7 +122,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger }) {
       // When signing in
       if (user) {
-        token.role = user.role;
+        token.role = user.role as AppRole;
         token.requirePasswordChange = user.requirePasswordChange;
       }
       
@@ -152,25 +153,41 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session?.user) {
-        session.user.role = token.role as string;
+        session.user.role = token.role as AppRole;
         session.user.requirePasswordChange = token.requirePasswordChange as boolean;
       }
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      // Check if this is a sign-in callback URL
-      if (url.includes('/api/auth/callback') || url.includes('/api/auth/signin')) {
-        // On sign-in, we will determine the redirect in middleware based on requirePasswordChange
-        return baseUrl;
-      }
-      
-      // For other URLs, maintain them as is
-      if (url.startsWith(baseUrl)) {
+    async redirect({ url, baseUrl: originalBaseUrl }) {
+      const appBaseUrl = process.env.NEXTAUTH_URL || originalBaseUrl;
+
+      // If the provided url is already correctly based, return it
+      if (url.startsWith(appBaseUrl)) {
         return url;
       }
-      
-      // Default to base URL
-      return baseUrl;
+
+      // If the url is relative (e.g., "/dashboard"), make it absolute with appBaseUrl
+      if (url.startsWith("/")) {
+        return `${appBaseUrl}${url}`;
+      }
+
+      // If the url is absolute but has a different origin (e.g., http://localhost:3000 instead of http://localhost:3001)
+      // attempt to reconstruct it with the correct appBaseUrl, preserving path and query.
+      try {
+        const incomingUrl = new URL(url);
+        if (incomingUrl.origin !== appBaseUrl) {
+          console.log(`Redirecting from ${incomingUrl.origin} to ${appBaseUrl} for path ${incomingUrl.pathname}`);
+          return `${appBaseUrl}${incomingUrl.pathname}${incomingUrl.search}${incomingUrl.hash}`;
+        }
+        // If origins match, but it didn't pass the startsWith check (e.g. trailing slash differences), return it as is.
+        return url;
+      } catch (e) {
+        // This might happen if the URL is not a valid absolute URL and not starting with "/"
+        // For example, a malformed URL or an unexpected relative path format.
+        console.warn(`Redirect callback: Could not parse '${url}' as an absolute URL. Falling back to originalBaseUrl logic.`);
+        // Fallback to original logic for unparseable or non-relative-path URLs.
+        return url.startsWith('/') ? `${originalBaseUrl}${url}` : url;
+      }
     }
   },
   pages: {

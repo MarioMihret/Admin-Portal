@@ -39,16 +39,24 @@ export async function POST(req: Request) {
       await client.connect();
       const db = client.db();
 
+      let user;
+      let collectionToUpdate; // Variable to store the correct collection name
+
       // First look for the user in the role collection (for admins)
-      let user = await db.collection('role').findOne({
+      user = await db.collection('role').findOne({
         email: session.user.email
       });
       
-      // If not found in role collection, check user collection
-      if (!user) {
+      if (user) {
+        collectionToUpdate = 'role'; // User found in 'role' collection
+      } else {
+        // If not found in role collection, check user collection
         user = await db.collection('user').findOne({
           email: session.user.email
         });
+        if (user) {
+          collectionToUpdate = 'user'; // User found in 'user' collection
+        }
       }
 
       if (!user) {
@@ -71,12 +79,15 @@ export async function POST(req: Request) {
       // Hash new password
       const hashedPassword = await hash(newPassword, 12);
       
-      // Determine which collection to update
-      const collectionName = user._id.toString().startsWith('role') ? 'role' : 'user';
-      
-      // Update password and remove password change requirement
-      await db.collection(collectionName).updateOne(
-        { _id: user._id },
+      // Update password and remove password change requirement in the correct collection
+      if (!collectionToUpdate) { 
+        // Should not happen if user was found, but as a safeguard
+        console.error("Error: collectionToUpdate was not set for user:", session.user.email);
+        throw new Error("Could not determine user collection for password update.");
+      }
+
+      await db.collection(collectionToUpdate).updateOne(
+        { _id: user._id }, 
         {
           $set: {
             password: hashedPassword,

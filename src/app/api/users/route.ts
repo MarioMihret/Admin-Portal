@@ -43,26 +43,31 @@ export async function GET(request: Request) {
     
     // Get admin roles from role collection
     if (users.length > 0) {
-      // Get all emails to look up in the role collection
       const userEmails = users.map(user => user.email);
       
-      // Find all admin roles for these users
-      const adminRoles = await Role.find({ 
+      // Fetch all relevant roles from the Role collection for these users
+      // This query might need adjustment if "Organizer" is not considered an "admin" role by default
+      const rolesFromRoleCollection = await Role.find({ 
         email: { $in: userEmails } 
+        // If Role model has a field to distinguish role types, you might filter here
+        // e.g., roleType: { $in: ['Admin', 'Super Admin', 'Organizer'] } 
       });
       
-      // Map emails to roles for quick lookup
       const emailToRoleMap = new Map();
-      adminRoles.forEach(role => {
-        emailToRoleMap.set(role.email, role.role);
+      rolesFromRoleCollection.forEach(roleEntry => {
+        // Prioritize more specific roles if a user could have multiple entries in Role collection
+        // For this example, we assume one primary role entry or the last one processed wins.
+        emailToRoleMap.set(roleEntry.email, roleEntry.role);
       });
       
-      // Update user roles from the admin roles
       users.forEach(user => {
-        const adminRole = emailToRoleMap.get(user.email);
-        if (adminRole) {
-          user.role = adminRole;
+        const specialRole = emailToRoleMap.get(user.email);
+        if (specialRole) {
+          // If a role (Admin, Super Admin, Organizer, etc.) is found in the Role collection,
+          // use it, regardless of the base role in the User collection.
+          user.role = specialRole;
         }
+        // If no specific role is found in Role collection, user.role remains as it was from User collection.
       });
     }
     

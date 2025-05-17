@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { ROLES, AppRole } from '@/constants/roles'; // Import roles
 
 // Caching mechanism for token checks
 const tokenCache = new Map<string, { token: any; timestamp: number }>();
@@ -83,6 +84,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
     
+    // Ensure token.role is of AppRole type if possible, or handle potential string values
+    const userRole = token.role as AppRole;
+    
     // Only log on important paths, not for assets or repeated requests
     const isImportantPath = !pathname.includes('._next') && 
                            !pathname.includes('/dashboard') && 
@@ -92,17 +96,16 @@ export async function middleware(request: NextRequest) {
     if (isImportantPath) {
       console.log('Middleware token check:', { 
         email: token.email, 
-        role: token.role, 
+        role: userRole, 
         requirePasswordChange: token.requirePasswordChange,
         path: pathname
       });
     }
     
     // Only admins and super-admins should be redirected for password change
-    const isAdminUser = token.role === 'admin' || token.role === 'super-admin';
+    const isAdminUser = userRole === ROLES.ADMIN || userRole === ROLES.SUPER_ADMIN;
     
     // If user needs to change password and not already on change password page
-    // Only enforce for admin and super-admin roles
     if (isAdminUser && token.requirePasswordChange === true && !pathname.includes('/auth/change-password')) {
       // Clear any cached token to force refresh on next request
       if (sessionId) {

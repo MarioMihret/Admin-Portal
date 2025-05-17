@@ -15,7 +15,7 @@ export function useLoading() {
 }
 
 // Loading animation component
-function LoadingSpinner() {
+export function LoadingSpinner() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-90 z-50 backdrop-blur-sm transition-opacity duration-300">
       <div className="relative">
@@ -65,6 +65,14 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
 
   // Function to ensure minimum display time for loading
   const showLoading = (show: boolean) => {
+    // **** Do not show global loading for the sign-in page ****
+    if (pathname === '/auth/signin') {
+      setIsLoading(false); // Ensure it's off if we are on signin page
+      if (loadingTimer) clearTimeout(loadingTimer);
+      if (safetyTimer) clearTimeout(safetyTimer);
+      return;
+    }
+
     if (show) {
       // Clear any existing timers first
       if (loadingTimer) {
@@ -102,6 +110,11 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
 
   // Track route changes
   useEffect(() => {
+    // **** Do not show global loading for the sign-in page ****
+    if (pathname === '/auth/signin') {
+      setIsLoading(false);
+      return; // Early exit for signin page
+    }
     showLoading(true);
     
     // Auto hide loading after the route has changed
@@ -126,7 +139,8 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LoadingContext.Provider value={{ isLoading, setIsLoading: showLoading }}>
-      {isLoading && <LoadingSpinner />}
+      {/* **** Conditionally render LoadingSpinner **** */}
+      {isLoading && pathname !== '/auth/signin' && <LoadingSpinner />}
       {children}
     </LoadingContext.Provider>
   );

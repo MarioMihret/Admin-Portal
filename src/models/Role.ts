@@ -5,6 +5,7 @@ const roleSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ["admin", "super-admin"], required: true },
+  university: { type: String, required: true },
   isActive: { type: Boolean, default: true },
   requirePasswordChange: { type: Boolean, default: true },
   failedLoginAttempts: { type: Number, default: 0 },

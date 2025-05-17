@@ -146,9 +146,9 @@ export default function ChangePasswordPage() {
       // Force a complete session refresh by reloading the session
       await update();
       
-      // Redirect to dashboard page which will handle role-based redirection
+      // Redirect to the sign-in page after successful password change
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/auth/signin');
       }, 2000);
 
     } catch (err: any) {

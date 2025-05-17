@@ -2,12 +2,9 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
-import { 
-  LogOut,
-  Search
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { AdminNavigation, MobileNavProvider } from "@/components/admin/Navigation";
-import { signOutAction } from "./actions";
+import { SignOutButton } from "@/components/admin/SignOutButton";
 
 export default async function AdminLayout({
   children,
@@ -16,7 +13,7 @@ export default async function AdminLayout({
 }) {
   const session = await getServerSession(authOptions);
 
-  if (!session || (session.user.role !== "admin" && session.user.role !== "super-admin")) {
+  if (!session || !session.user || (session.user.role !== "admin" && session.user.role !== "super-admin")) {
     redirect("/unauthorized");
   }
 
@@ -59,15 +56,9 @@ export default async function AdminLayout({
                 </p>
               </div>
             </div>
-            <form action={signOutAction} className="mt-3">
-              <button
-                type="submit"
-                className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign out
-              </button>
-            </form>
+            <div className="mt-3">
+              <SignOutButton />
+            </div>
           </div>
         </div>
       </div>
