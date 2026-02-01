@@ -55,9 +55,9 @@ export interface UpdateUserInput {
 // API methods
 export const userService = {
   // Get all users with pagination and search
-  getUsers: async (search: string = '', page: number = 1, limit: number = 10): Promise<UsersResponse> => {
+  getUsers: async (search: string = '', page: number = 1, limit: number = 10, status: string = 'all'): Promise<UsersResponse> => {
     try {
-      const response = await fetch(`/api/users?search=${search}&page=${page}&limit=${limit}`);
+      const response = await fetch(`/api/users?search=${search}&page=${page}&limit=${limit}&status=${status}`);
       
       if (!response.ok) {
         throw new Error(`Error fetching users: ${response.statusText}`);

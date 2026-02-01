@@ -310,7 +310,7 @@ export default function AddUserPage() {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+                      className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 text-gray-900"
                       placeholder="John Smith"
                       autoFocus
                     />
@@ -330,7 +330,7 @@ export default function AddUserPage() {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+                      className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 text-gray-900"
                       placeholder="john.smith@example.com"
                     />
                   </div>
@@ -355,7 +355,7 @@ export default function AddUserPage() {
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
-                      className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+                      className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 text-gray-900"
                       placeholder="••••••••"
                       autoFocus
                     />
@@ -405,7 +405,7 @@ export default function AddUserPage() {
                       name="role"
                       value={formData.role}
                       onChange={handleChange}
-                      className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 appearance-none"
+                      className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 appearance-none text-gray-900"
                       autoFocus
                     >
                       <option value="">Select a role</option>

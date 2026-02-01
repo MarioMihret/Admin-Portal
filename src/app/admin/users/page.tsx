@@ -25,6 +25,7 @@ export default function UsersPage() {
     limit: 10,
     pages: 0
   });
+  const [statusFilter, setStatusFilter] = useState('all');
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const { data: session } = useSession();
@@ -67,9 +68,9 @@ export default function UsersPage() {
       setError(null);
       setDebugInfo(null);
       
-      console.log('Fetching users with params:', { searchQuery, page: pagination.page, limit: pagination.limit });
+      console.log('Fetching users with params:', { searchQuery, page: pagination.page, limit: pagination.limit, status: statusFilter });
       
-      const response = await userService.getUsers(searchQuery, pagination.page, pagination.limit);
+      const response = await userService.getUsers(searchQuery, pagination.page, pagination.limit, statusFilter);
       console.log('User API response:', response);
       
       // Ensure users array exists and is an array
@@ -162,7 +163,7 @@ export default function UsersPage() {
       
       return () => clearTimeout(timer);
     }
-  }, [searchQuery, pagination.page, pagination.limit, refreshCounter]);
+  }, [searchQuery, pagination.page, pagination.limit, refreshCounter, statusFilter]);
 
   // Force refresh function to be called when user is created/deleted/updated
   const forceRefresh = () => {
@@ -221,6 +222,31 @@ export default function UsersPage() {
     }
   };
 
+  const handleExport = () => {
+    if (users.length === 0) return;
+    
+    const headers = ['Name', 'Email', 'Role', 'Status', 'CreatedAt'];
+    const csvContent = [
+      headers.join(','),
+      ...users.map(user => [
+        `"${user.name || ''}"`,
+        `"${user.email || ''}"`,
+        `"${user.role || ''}"`,
+        `"${user.isActive ? 'Active' : 'Inactive'}"`,
+        `"${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : ''}"`
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'users_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!mounted) return null;
 
   return (
@@ -249,15 +275,27 @@ export default function UsersPage() {
               placeholder="Search users..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             />
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Filter
-          </button>
-          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <button 
+            onClick={handleExport}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
             Export
           </button>
         </div>

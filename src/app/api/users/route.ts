@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     console.log('Querying with params:', { search, limit, page, skip });
     
     // Create a query object for searching
-    const query = search 
+    const query: any = search 
       ? {
           $or: [
             { name: { $regex: search, $options: "i" } },
@@ -29,6 +29,13 @@ export async function GET(request: Request) {
           ]
         } 
       : {};
+
+    const status = url.searchParams.get("status");
+    if (status === 'active') {
+      query.isActive = true;
+    } else if (status === 'inactive') {
+      query.isActive = false;
+    }
     
     console.log('Executing query on user collection...');
     

@@ -39,6 +39,8 @@ const organizerApplicationSchema = new mongoose.Schema({
   // Timestamps
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+}, {
+  collection: 'organizer_applications'
 });
 
 // Create text index for search functionality
@@ -61,5 +63,12 @@ organizerApplicationSchema.index({
   name: 'TextSearchIndex'
 });
 
+// Avoid OverwriteModelError in development by deleting the model if it exists
+if (process.env.NODE_ENV === 'development') {
+  if (mongoose.models.OrganizerApplication) {
+    delete mongoose.models.OrganizerApplication;
+  }
+}
+
 export default mongoose.models.OrganizerApplication || 
-  mongoose.model('OrganizerApplication', organizerApplicationSchema); 
+  mongoose.model('OrganizerApplication', organizerApplicationSchema);

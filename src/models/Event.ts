@@ -103,7 +103,7 @@ const eventSchema = new Schema({
   minimumAttendees: { type: Number },
   status: { 
     type: String, 
-    enum: ['Draft', 'Published', 'Cancelled', 'Postponed', 'Sold Out', 'Completed'],
+    enum: ['Draft', 'Published', 'Cancelled', 'Postponed', 'Sold Out', 'Completed', 'Upcoming'],
     default: 'Draft'
   },
   visibility: { 

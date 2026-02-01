@@ -1,19 +1,11 @@
 import { connectToDatabase } from "@/lib/db";
 import { NextResponse } from "next/server";
-
-// Added constant for collection name to ensure consistency
-const COLLECTION_NAME = 'organizer_applications';
+import OrganizerApplication from "@/models/OrganizerApplication";
 
 export async function GET(request: Request) {
   try {
     console.log('Connecting to database for GET applications...');
-    const connection = await connectToDatabase();
-    console.log('Database connected:', connection?.db?.databaseName || 'unknown');
-    
-    // Ensure database connection is established
-    if (!connection || !connection.db) {
-      throw new Error("Database connection failed");
-    }
+    await connectToDatabase();
     
     // Get query parameters
     const url = new URL(request.url);
@@ -31,8 +23,8 @@ export async function GET(request: Request) {
       filter.$or = [
         { fullName: { $regex: searchQuery, $options: 'i' } },
         { email: { $regex: searchQuery, $options: 'i' } },
-        { organization: { $regex: searchQuery, $options: 'i' } },
-        { university: { $regex: searchQuery, $options: 'i' } }
+        { university: { $regex: searchQuery, $options: 'i' } },
+        { department: { $regex: searchQuery, $options: 'i' } }
       ];
     }
     
@@ -40,21 +32,24 @@ export async function GET(request: Request) {
       filter.status = status;
     }
     
-    console.log('Using collection:', COLLECTION_NAME);
-    console.log('Filter:', filter);
+    console.log('DEBUG - Model Info:', {
+      collectionName: OrganizerApplication.collection.name,
+      dbName: OrganizerApplication.db.name,
+      modelName: OrganizerApplication.modelName,
+      filter: JSON.stringify(filter)
+    });
     
     // Calculate pagination
     const skip = (page - 1) * limit;
     
-    // Get applications with pagination
+    // Get applications with pagination using Mongoose model
     const [applications, total] = await Promise.all([
-      connection.db.collection(COLLECTION_NAME)
-        .find(filter)
+      OrganizerApplication.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .toArray(),
-      connection.db.collection(COLLECTION_NAME).countDocuments(filter)
+        .lean(), // Use lean() for better performance
+      OrganizerApplication.countDocuments(filter)
     ]);
     
     console.log(`Found ${applications.length} applications out of ${total} total`);
@@ -73,14 +68,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Error fetching applications:", error);
-    
-    // More detailed error logging
-    if (error instanceof Error) {
-      console.error("Error name:", error.name);
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    
     return NextResponse.json(
       { error: "Failed to fetch applications" },
       { status: 500 }
@@ -92,19 +79,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     console.log('Connecting to database for POST application...');
-    const connection = await connectToDatabase();
-    console.log('Database connected:', connection?.db?.databaseName || 'unknown');
-    
-    // Ensure database connection is established
-    if (!connection || !connection.db) {
-      throw new Error("Database connection failed");
-    }
+    await connectToDatabase();
     
     const body = await request.json();
     console.log('Creating new application with data:', body);
     
     // Validate required fields
-    const requiredFields = ['fullName', 'email', 'organization', 'experience', 'reason'];
+    const requiredFields = ['fullName', 'email', 'university', 'experience', 'reason'];
     for (const field of requiredFields) {
       if (!body[field]) {
         return NextResponse.json(
@@ -115,8 +96,7 @@ export async function POST(request: Request) {
     }
     
     // Check if email already exists
-    const existingApplication = await connection.db.collection(COLLECTION_NAME)
-      .findOne({ email: body.email });
+    const existingApplication = await OrganizerApplication.findOne({ email: body.email });
     
     if (existingApplication) {
       return NextResponse.json(
@@ -125,44 +105,23 @@ export async function POST(request: Request) {
       );
     }
     
-    // Prepare the application data
-    const now = new Date();
-    const applicationData = {
+    // Create new application using Mongoose
+    const newApplication = await OrganizerApplication.create({
       ...body,
-      status: 'pending',
-      createdAt: now,
-      updatedAt: now
-    };
-    
-    // Insert new application
-    const result = await connection.db.collection(COLLECTION_NAME)
-      .insertOne(applicationData);
-    
-    if (!result.insertedId) {
-      throw new Error("Failed to insert application");
-    }
-    
-    // Get the created application
-    const createdApplication = await connection.db.collection(COLLECTION_NAME)
-      .findOne({ _id: result.insertedId });
+      status: 'pending'
+    });
     
     return NextResponse.json({ 
       success: true, 
       message: "Application submitted successfully",
-      application: createdApplication
+      application: newApplication
     });
   } catch (error) {
     console.error("Error creating application:", error);
-    
-    if (error instanceof Error) {
-      console.error("Error name:", error.name);
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    
     return NextResponse.json(
       { error: "Failed to create application" },
       { status: 500 }
     );
   }
-} 
+}
+ 

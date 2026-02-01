@@ -290,11 +290,62 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     try {
       setSaving(true);
       
+      // Clean up data before sending to avoid CastErrors and ValidationErrors
+      const dataToSubmit = { ...formData };
+      
+      // 1. Remove organizerId if empty
+      if (!dataToSubmit.organizerId) {
+        delete (dataToSubmit as any).organizerId;
+      }
+      
+      // 2. Remove empty nested objects (logo, coverImage) if no URL
+      if (dataToSubmit.logo && !dataToSubmit.logo.url) {
+        delete (dataToSubmit as any).logo;
+      }
+      if (dataToSubmit.coverImage && !dataToSubmit.coverImage.url) {
+        delete (dataToSubmit as any).coverImage;
+      }
+      
+      // 3. Ensure Enums are correct case (Schema expects Title Case)
+      const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+      
+      if (dataToSubmit.visibility) {
+        // Handle "Public", "Private", "Unlisted"
+        dataToSubmit.visibility = capitalize(dataToSubmit.visibility) as EventVisibility;
+      }
+      
+      if (dataToSubmit.status) {
+        // Handle "Draft", "Published", etc.
+        // Special case for 'Sold Out' which has a space
+        if (dataToSubmit.status.toLowerCase() === 'sold out') {
+           dataToSubmit.status = 'Sold Out' as EventStatus;
+        } else {
+           dataToSubmit.status = capitalize(dataToSubmit.status) as EventStatus;
+        }
+      }
+
+       if (dataToSubmit.skillLevel) {
+        // Handle "Beginner", "Intermediate", "Advanced", "All Levels"
+         if (dataToSubmit.skillLevel.toLowerCase() === 'all levels') {
+           dataToSubmit.skillLevel = 'All Levels' as EventSkillLevel;
+        } else {
+           dataToSubmit.skillLevel = capitalize(dataToSubmit.skillLevel) as EventSkillLevel;
+        }
+      }
+      
+      // 4. Handle optional fields that might be empty strings
+      if (!dataToSubmit.streamingPlatform) {
+        delete (dataToSubmit as any).streamingPlatform;
+      }
+      
+      // Log payload for debugging
+      console.log('Submitting event data:', dataToSubmit);
+
       if (isNewEvent) {
-        await eventService.createEvent(formData);
+        await eventService.createEvent(dataToSubmit);
         router.push('/admin/events');
       } else {
-        await eventService.updateEvent(eventId, formData);
+        await eventService.updateEvent(eventId, dataToSubmit);
         
         // Refresh event data
         const response = await eventService.getEventById(eventId);
@@ -388,10 +439,12 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
       <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         {isEditing || isNewEvent ? (
           /* Edit Form */
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4 md:col-span-2">
-                <div>
+          <form onSubmit={handleSubmit} className="p-6 space-y-8">
+            {/* 1. Basic Information section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Event Title*
                   </label>
@@ -401,192 +454,412 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                     value={formData.title}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   />
                 </div>
                 
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description*
+                    Short Description <span className="text-xs text-gray-500">(Summary for card view)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="shortDescription"
+                    value={formData.shortDescription}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Description*
                   </label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
                     required
-                    rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={6}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   />
                 </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date*
-                </label>
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Time*
-                </label>
-                <input
-                  type="text"
-                  name="time"
-                  value={formData.time}
-                  onChange={handleChange}
-                  placeholder="e.g. 7:00 PM - 9:00 PM"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Location*
-                </label>
-                <input
-                  type="text"
-                  name="location.address"
-                  value={formData.location.address}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category*
-                </label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select a category</option>
-                  <option value="Conference">Conference</option>
-                  <option value="Workshop">Workshop</option>
-                  <option value="Seminar">Seminar</option>
-                  <option value="Networking">Networking</option>
-                  <option value="Social">Social</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Capacity
-                </label>
-                <input
-                  type="number"
-                  name="maxAttendees"
-                  value={formData.maxAttendees}
-                  onChange={handleChange}
-                  min="1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Image URL
-                </label>
-                <input
-                  type="url"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleChange}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tags
-                </label>
-                <div className="flex">
-                  <input
-                    type="text"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                    placeholder="Add tags and press Enter"
-                    className="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddTag}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-l-0 border-gray-300 rounded-r-lg"
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category*
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   >
-                    Add
-                  </button>
+                    <option value="">Select a category</option>
+                    <option value="Conference">Conference</option>
+                    <option value="Workshop">Workshop</option>
+                    <option value="Seminar">Seminar</option>
+                    <option value="Networking">Networking</option>
+                    <option value="Social">Social</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.tags.map((tag, index) => (
-                    <div 
-                      key={index} 
-                      className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center"
-                    >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        className="ml-2 text-blue-600 hover:text-blue-800"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    name="isActive"
-                    checked={formData.isActive}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
-                    Active
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Skill Level
                   </label>
+                  <select
+                    name="skillLevel"
+                    value={formData.skillLevel}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="All Levels">All Levels</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
                 </div>
-                <p className="mt-1 text-sm text-gray-500">Active events are visible to users</p>
-              </div>
-              
-              <div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="isFeatured"
-                    name="isFeatured"
-                    checked={formData.isFeatured}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isFeatured" className="ml-2 block text-sm text-gray-700">
-                    Featured
-                  </label>
-                </div>
-                <p className="mt-1 text-sm text-gray-500">Featured events are highlighted on the homepage</p>
               </div>
             </div>
             
+            {/* 2. Time & Date section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Date & Time</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date*
+                  </label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={formData.endDate}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Time*
+                  </label>
+                  <input
+                    type="text"
+                    name="time"
+                    value={formData.time}
+                    onChange={handleChange}
+                    placeholder="e.g. 7:00 PM - 9:00 PM"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Duration (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    name="duration"
+                    value={formData.duration}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* 3. Location section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Location</h3>
+              
+              <div className="flex items-center mb-4">
+                 <input
+                    type="checkbox"
+                    id="isVirtual"
+                    name="isVirtual"
+                    checked={formData.isVirtual}
+                    onChange={handleCheckboxChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isVirtual" className="ml-2 block text-sm text-gray-900">
+                    This is a virtual event
+                  </label>
+              </div>
+
+              {formData.isVirtual ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
+                   <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Streaming Platform
+                      </label>
+                      <select
+                        name="streamingPlatform"
+                        value={formData.streamingPlatform}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      >
+                        <option value="">Select Platform</option>
+                        <option value="Zoom">Zoom</option>
+                        <option value="Google Meet">Google Meet</option>
+                        <option value="Microsoft Teams">Microsoft Teams</option>
+                        <option value="YouTube">YouTube</option>
+                        <option value="Other">Other</option>
+                      </select>
+                   </div>
+                   <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Meeting Link
+                      </label>
+                      <input
+                        type="url"
+                        name="meetingLink"
+                        value={formData.meetingLink}
+                        onChange={handleChange}
+                        placeholder="https://..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      />
+                   </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Address*
+                    </label>
+                    <input
+                      type="text"
+                      name="location.address"
+                      value={formData.location.address}
+                      onChange={handleChange}
+                      required={!formData.isVirtual}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      name="location.city"
+                      value={formData.location.city}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    />
+                  </div>
+                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Venue Details
+                    </label>
+                    <input
+                      type="text"
+                      name="location.venueDetails"
+                      value={formData.location.venueDetails}
+                      onChange={handleChange}
+                      placeholder="e.g. Room 304"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* 4. Settings & Media section */}
+            <div className="space-y-4">
+               <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Settings & Media</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    >
+                      <option value="Draft">Draft</option>
+                      <option value="Published">Published</option>
+                      <option value="Upcoming">Upcoming</option>
+                      <option value="Cancelled">Cancelled</option>
+                      <option value="Postponed">Postponed</option>
+                      <option value="Sold Out">Sold Out</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                 </div>
+
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Visibility
+                    </label>
+                    <select
+                      name="visibility"
+                      value={formData.visibility}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    >
+                      <option value="Public">Public</option>
+                      <option value="Private">Private</option>
+                      <option value="Unlisted">Unlisted</option>
+                    </select>
+                 </div>
+
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price
+                    </label>
+                    <input
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleChange}
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    />
+                 </div>
+
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Currency
+                    </label>
+                    <select
+                      name="currency"
+                      value={formData.currency}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    >
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                      <option value="ETB">ETB</option>
+                    </select>
+                 </div>
+                 
+                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Capacity (Max Attendees)
+                  </label>
+                  <input
+                    type="number"
+                    name="maxAttendees"
+                    value={formData.maxAttendees}
+                    onChange={handleChange}
+                    min="1"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Image URL
+                  </label>
+                  <input
+                    type="url"
+                    name="imageUrl"
+                    value={formData.imageUrl}
+                    onChange={handleChange}
+                    placeholder="https://example.com/image.jpg"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+              </div>
+
+               <div className="md:col-span-2 mt-4">
+                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                   Tags
+                 </label>
+                 <div className="flex">
+                   <input
+                     type="text"
+                     value={tagInput}
+                     onChange={(e) => setTagInput(e.target.value)}
+                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                     placeholder="Add tags and press Enter"
+                     className="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                   />
+                   <button
+                     type="button"
+                     onClick={handleAddTag}
+                     className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-l-0 border-gray-300 rounded-r-lg"
+                   >
+                     Add
+                   </button>
+                 </div>
+                 <div className="flex flex-wrap gap-2 mt-2">
+                   {formData.tags.map((tag, index) => (
+                     <div 
+                       key={index} 
+                       className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center"
+                     >
+                       {tag}
+                       <button
+                         type="button"
+                         onClick={() => handleRemoveTag(tag)}
+                         className="ml-2 text-blue-600 hover:text-blue-800"
+                       >
+                         &times;
+                       </button>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+               
+               <div className="flex gap-6 mt-4 pt-4 border-t border-gray-100">
+                  <div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="isActive"
+                        name="isActive"
+                        checked={formData.isActive}
+                        onChange={handleCheckboxChange}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
+                        Active
+                      </label>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-500">Active events are visible to users</p>
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="isFeatured"
+                        name="isFeatured"
+                        checked={formData.isFeatured}
+                        onChange={handleCheckboxChange}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="isFeatured" className="ml-2 block text-sm text-gray-700">
+                        Featured
+                      </label>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-500">Featured events are highlighted</p>
+                  </div>
+               </div>
+            </div>
+            
+            {/* Form Actions */}
             <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200">
               {!isNewEvent && (
                 <button

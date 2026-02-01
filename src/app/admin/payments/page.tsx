@@ -156,12 +156,63 @@ export default function PaymentsPage() {
   };
   
   // Handle export functionality
-  const handleExport = () => {
-    // In a real application, you might call an API endpoint that returns a CSV file
-    console.log('Export payments functionality would be implemented here');
-    
-    // Example notification to user
-    alert('Your export is being prepared and will be downloaded shortly.');
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      
+      // Build query params for export (fetching all matching records)
+      const queryParams = new URLSearchParams();
+      if (searchTerm) queryParams.append('search', searchTerm);
+      if (statusFilter !== 'all') queryParams.append('status', statusFilter);
+      queryParams.append('limit', '10000'); // Fetch up to 10000 records for export
+      queryParams.append('page', '1');
+      
+      const response = await fetch(`/api/payments?${queryParams.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch data for export');
+      }
+      
+      const data: PaymentListResponse = await response.json();
+      
+      // Convert to CSV
+      const headers = ['Transaction ID', 'Date', 'Amount', 'Currency', 'Status', 'Customer Name', 'Customer Email'];
+      const csvContent = [
+        headers.join(','),
+        ...data.payments.map(payment => {
+          const date = new Date(payment.payment_date).toLocaleDateString('en-US');
+          const name = `${payment.first_name} ${payment.last_name}`.replace(/,/g, ''); // Remove commas to prevent CSV issues
+          return [
+            payment.tx_ref,
+            date,
+            payment.amount,
+            payment.currency,
+            payment.status,
+            name,
+            payment.email
+          ].join(',');
+        })
+      ].join('\n');
+      
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `payments_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Failed to export payments. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -235,7 +286,7 @@ export default function PaymentsPage() {
             </div>
             <input
               type="text"
-              className="pl-10 pr-3 py-2 w-full border border-blue-100 rounded-lg bg-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="pl-10 pr-3 py-2 w-full border border-blue-100 rounded-lg bg-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
               placeholder="Search payments..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -246,7 +297,7 @@ export default function PaymentsPage() {
             <div className="flex items-center">
               <Filter className="h-5 w-5 text-gray-400 mr-2" />
               <select
-                className="border border-blue-100 rounded-lg bg-white/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="border border-blue-100 rounded-lg bg-white/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -270,11 +321,21 @@ export default function PaymentsPage() {
 
             <button
               type="button"
-              className="inline-flex items-center px-4 py-2 border border-blue-100 rounded-lg bg-white text-sm font-medium text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-blue-100 rounded-lg bg-white text-sm font-medium text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleExport}
+              disabled={exporting}
             >
-              <Download className="h-5 w-5 mr-2" />
-              Export
+              {exporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="h-5 w-5 mr-2" />
+                  Export
+                </>
+              )}
             </button>
           </div>
         </div>

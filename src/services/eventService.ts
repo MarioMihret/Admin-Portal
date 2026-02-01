@@ -1,6 +1,6 @@
 // Type definitions
 export type EventCategory = 'Conference' | 'Workshop' | 'Seminar' | 'Meetup' | 'Webinar' | 'Training' | 'Networking' | 'Social' | 'Other';
-export type EventStatus = 'Draft' | 'Published' | 'Cancelled' | 'Postponed' | 'Sold Out' | 'Completed';
+export type EventStatus = 'Draft' | 'Published' | 'Cancelled' | 'Postponed' | 'Sold Out' | 'Completed' | 'Upcoming';
 export type EventVisibility = 'Public' | 'Private' | 'Unlisted';
 export type EventSkillLevel = 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels';
 export type StreamingPlatform = 'Zoom' | 'Google Meet' | 'Microsoft Teams' | 'Webex' | 'YouTube' | 'Facebook' | 'Twitch' | 'Other';
@@ -177,9 +177,16 @@ export interface UpdateEventInput extends Partial<CreateEventInput> {}
 // API methods
 export const eventService = {
   // Get all events with pagination and search
-  getEvents: async (search: string = '', page: number = 1, limit: number = 10): Promise<EventsResponse> => {
+  getEvents: async (search: string = '', page: number = 1, limit: number = 10, category: string = '', status: string = ''): Promise<EventsResponse> => {
     try {
-      const response = await fetch(`/api/events?search=${search}&page=${page}&limit=${limit}`);
+      const queryParams = new URLSearchParams();
+      if (search) queryParams.append('search', search);
+      queryParams.append('page', page.toString());
+      queryParams.append('limit', limit.toString());
+      if (category && category !== 'All') queryParams.append('category', category);
+      if (status && status !== 'All') queryParams.append('status', status);
+
+      const response = await fetch(`/api/events?${queryParams.toString()}`);
       
       if (!response.ok) {
         throw new Error(`Error fetching events: ${response.statusText}`);
